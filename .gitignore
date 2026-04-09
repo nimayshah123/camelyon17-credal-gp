@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Dataset (large files — not tracked)
+data/
+
+# Extracted features (large .npy files — not tracked)
+features/*.npy
+features/*.npz
+
+# Generated outputs — track figures for reproducibility
+# outputs/  <-- intentionally tracked
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Experiment logs
+*.log
+*.pkl
