@@ -27,6 +27,9 @@ import config
 # as long as load_features() is only called)
 # ---------------------------------------------------------------------------
 _TORCH_AVAILABLE = False
+_XLA_AVAILABLE   = False
+_xm              = None   # torch_xla.core.xla_model handle
+
 try:
     import torch
     import torchvision.models as models
@@ -35,6 +38,14 @@ try:
     from sklearn.decomposition import PCA
     import joblib
     _TORCH_AVAILABLE = True
+except ImportError:
+    pass
+
+# Try importing torch_xla for Kaggle TPU V5e-8 support
+try:
+    import torch_xla.core.xla_model as _xm_module
+    _xm            = _xm_module
+    _XLA_AVAILABLE = True
 except ImportError:
     pass
 
@@ -127,7 +138,11 @@ def build_resnet50_extractor():
     model  = torch.nn.Sequential(*list(model.children())[:-1])
     model.eval()
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if _XLA_AVAILABLE:
+        device = _xm.xla_device()
+        print("  TPU (XLA) device detected — using torch_xla.")
+    else:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model  = model.to(device)
 
     for param in model.parameters():
@@ -172,12 +187,14 @@ def extract_embeddings_for_hospital(
     labels     = h_dict['y']
 
     ds     = HospitalPatchDataset(subset, indices, labels)
+    # pin_memory only works for CUDA; disable for TPU/CPU
+    _pin = (not _XLA_AVAILABLE) and (str(device) != 'cpu') and torch.cuda.is_available()
     loader = DataLoader(
         ds,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=0,    # 0 workers for Windows compatibility
-        pin_memory=(device.type == 'cuda'),
+        num_workers=0,    # 0 workers for Windows/TPU compatibility
+        pin_memory=_pin,
     )
 
     all_embeddings = []
@@ -188,7 +205,13 @@ def extract_embeddings_for_hospital(
             imgs = imgs.to(device)
             out  = model(imgs)                  # (B, 2048, 1, 1)
             out  = out.squeeze(-1).squeeze(-1)  # (B, 2048)
-            all_embeddings.append(out.cpu().numpy())
+            if _XLA_AVAILABLE:
+                # XLA tensors must be explicitly synced before moving to CPU
+                _xm.mark_step()
+                out_cpu = out.to('cpu')
+            else:
+                out_cpu = out.cpu()
+            all_embeddings.append(out_cpu.numpy())
 
     return np.concatenate(all_embeddings, axis=0)
 

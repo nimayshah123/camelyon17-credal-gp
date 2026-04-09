@@ -2,6 +2,8 @@ wilds>=2.0
 torch>=2.0
 torchvision>=0.15
 Pillow>=9.0
+# torch_xla is optional — required only on Kaggle TPU; installed separately below
+# torch_xla  # see README / Kaggle setup instructions
 numpy>=1.24
 scipy>=1.10
 scikit-learn>=1.3
