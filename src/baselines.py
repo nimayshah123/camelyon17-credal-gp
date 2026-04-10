@@ -28,6 +28,7 @@ stochastic methods.
 
 import os
 import sys
+import time
 import numpy as np
 from typing import Optional, Tuple
 
@@ -38,6 +39,13 @@ from sklearn.pipeline import Pipeline
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
+
+
+def _fmt(seconds: float) -> str:
+    """Format elapsed seconds as m:ss or s."""
+    if seconds >= 60:
+        return f"{int(seconds//60)}m {int(seconds%60):02d}s"
+    return f"{seconds:.1f}s"
 
 
 # ---------------------------------------------------------------------------
@@ -168,12 +176,13 @@ class MCDropoutBaseline:
         X_scaled     = self._scaler.fit_transform(X)
 
         self._models = []
+        t0_all = time.time()
         for i in range(self.n_samples):
-            # alpha acts as L2 regularisation proxy; vary slightly per sample
-            # to simulate stochastic dropout variation
             rng_seed = config.RANDOM_SEED + i
             alpha    = self.dropout_rate * (0.8 + 0.4 * np.random.RandomState(rng_seed).rand())
 
+            t0 = time.time()
+            print(f"    MC Dropout [{i+1}/{self.n_samples}] fitting …", end=" ", flush=True)
             clf = MLPClassifier(
                 hidden_layer_sizes=self.hidden_layer_sizes,
                 activation='relu',
@@ -186,6 +195,10 @@ class MCDropoutBaseline:
             )
             clf.fit(X_scaled, y)
             self._models.append(clf)
+            elapsed = time.time() - t0
+            total_so_far = time.time() - t0_all
+            remaining = (total_so_far / (i + 1)) * (self.n_samples - i - 1)
+            print(f"done ({_fmt(elapsed)}) — est. remaining: {_fmt(remaining)}")
 
         return self
 
@@ -270,7 +283,10 @@ class DeepEnsembleBaseline:
         X_scaled     = self._scaler.fit_transform(X)
 
         self._models = []
+        t0_all = time.time()
         for i in range(self.n_ensemble):
+            t0 = time.time()
+            print(f"    Ensemble member [{i+1}/{self.n_ensemble}] fitting …", end=" ", flush=True)
             clf = MLPClassifier(
                 hidden_layer_sizes=self.hidden_layer_sizes,
                 activation='relu',
@@ -283,6 +299,10 @@ class DeepEnsembleBaseline:
             )
             clf.fit(X_scaled, y)
             self._models.append(clf)
+            elapsed = time.time() - t0
+            total_so_far = time.time() - t0_all
+            remaining = (total_so_far / (i + 1)) * (self.n_ensemble - i - 1)
+            print(f"done ({_fmt(elapsed)}) — est. remaining: {_fmt(remaining)}")
 
         return self
 
@@ -355,6 +375,15 @@ def train_all_baselines(
 
     X_train = np.concatenate(X_parts, axis=0)
     y_train = np.concatenate(y_parts, axis=0)
+
+    # Cap training samples so MLP training stays tractable
+    cap = config.MAX_TRAIN_SAMPLES
+    if cap is not None and len(X_train) > cap:
+        rng = np.random.RandomState(config.RANDOM_SEED)
+        idx = rng.choice(len(X_train), size=cap, replace=False)
+        X_train, y_train = X_train[idx], y_train[idx]
+        if verbose:
+            print(f"  Subsampled to {cap:,} samples (from {len(np.concatenate(X_parts)):,})")
 
     if verbose:
         print(f"  Training on {len(X_train):,} samples from hospitals "

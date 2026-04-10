@@ -52,8 +52,9 @@ GP_SUBSAMPLE = 300   # max training points for GP (kernel matrix memory)
 # ---------------------------------------------------------------------------
 # Baselines
 # ---------------------------------------------------------------------------
-N_ENSEMBLE    = 5    # number of models in deep ensemble
-N_MC_SAMPLES  = 20   # MC dropout forward passes
+N_ENSEMBLE       = 5      # number of models in deep ensemble
+N_MC_SAMPLES     = 20     # MC dropout forward passes
+MAX_TRAIN_SAMPLES = 50000  # cap training data for baselines (None = no cap)
 
 # ---------------------------------------------------------------------------
 # Metrics

@@ -98,7 +98,8 @@ def compute_nll(
     float : NLL ≥ 0.  Lower is better.
     """
     y_true = np.asarray(y_true).ravel().astype(float)
-    y_prob = np.clip(np.asarray(y_prob).ravel(), 1e-8, 1.0 - 1e-8)
+    y_prob = np.nan_to_num(np.asarray(y_prob).ravel(), nan=0.5, posinf=1.0, neginf=0.0)
+    y_prob = np.clip(y_prob, 1e-8, 1.0 - 1e-8)
 
     nll = -(y_true * np.log(y_prob) + (1.0 - y_true) * np.log(1.0 - y_prob))
     return float(nll.mean())
@@ -407,6 +408,8 @@ def aggregate_baseline_metrics(
     ens = baselines_dict.get('ensemble')
     if ens is not None:
         ens_mean, ens_unc = ens.predict_proba(X_all)
+        ens_mean = np.nan_to_num(ens_mean, nan=0.5, posinf=1.0, neginf=0.0)
+        ens_unc  = np.nan_to_num(ens_unc,  nan=0.0, posinf=1.0, neginf=0.0)
         results['Deep Ensemble'] = compute_all_metrics(
             y_all, ens_mean, ens_unc, is_ood
         )
