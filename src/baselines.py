@@ -376,14 +376,14 @@ def train_all_baselines(
     X_train = np.concatenate(X_parts, axis=0)
     y_train = np.concatenate(y_parts, axis=0)
 
-    # Cap training samples so MLP training stays tractable
+    # Optional training sample cap (config.MAX_TRAIN_SAMPLES = None means no cap)
     cap = config.MAX_TRAIN_SAMPLES
     if cap is not None and len(X_train) > cap:
         rng = np.random.RandomState(config.RANDOM_SEED)
         idx = rng.choice(len(X_train), size=cap, replace=False)
         X_train, y_train = X_train[idx], y_train[idx]
         if verbose:
-            print(f"  Subsampled to {cap:,} samples (from {len(np.concatenate(X_parts)):,})")
+            print(f"  Subsampled to {cap:,} training samples")
 
     if verbose:
         print(f"  Training on {len(X_train):,} samples from hospitals "

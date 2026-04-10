@@ -47,14 +47,14 @@ BATCH_SIZE = 64    # batch size for ResNet50 forward passes
 CREDAL_LENGTHSCALES  = [0.1, 0.3, 0.7, 1.5, 3.5]   # diverse RBF lengthscales
 CREDAL_OUTPUT_SCALES = [0.5, 1.0, 2.0]               # diverse output scales
 NOISE = 0.05                                           # observation noise (fixed)
-GP_SUBSAMPLE = 300   # max training points for GP (kernel matrix memory)
+GP_SUBSAMPLE = 2000  # max training points for GP (O(n³) Cholesky — 2k is safe)
 
 # ---------------------------------------------------------------------------
 # Baselines
 # ---------------------------------------------------------------------------
-N_ENSEMBLE       = 5      # number of models in deep ensemble
-N_MC_SAMPLES     = 20     # MC dropout forward passes
-MAX_TRAIN_SAMPLES = 50000  # cap training data for baselines (None = no cap)
+N_ENSEMBLE        = 5     # number of models in deep ensemble
+N_MC_SAMPLES      = 10    # MC dropout forward passes (reduced from 20 for speed)
+MAX_TRAIN_SAMPLES = None  # no cap — use all available training data
 
 # ---------------------------------------------------------------------------
 # Metrics
